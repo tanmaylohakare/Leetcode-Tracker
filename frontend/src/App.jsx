@@ -17,12 +17,13 @@ function App() {
   const [editStudentId, setEditStudentId] = useState(null);
   const [newStudent, setNewStudent] = useState({ name: '', username: '', univRoll: '', section: '1AF', githubId: '' });
   const [isUploading, setIsUploading] = useState(false);
-  const [showDashboard, setShowDashboard] = useState(false);
+  const [showDashboard, setShowDashboard] = useState(() => localStorage.getItem('hasEnteredDashboard') === 'true');
   const [isFading, setIsFading] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [sectionMetadata, setSectionMetadata] = useState({}); // { sectionName: trainerName }
   const [isEditSectionModalOpen, setEditSectionModalOpen] = useState(false);
   const [editSectionData, setEditSectionData] = useState({ oldName: '', newName: '', trainerName: '' });
+  const [isSectionDropdownOpen, setIsSectionDropdownOpen] = useState(false);
 
   useEffect(() => {
     if (!isDarkMode) {
@@ -36,6 +37,7 @@ function App() {
     setIsFading(true);
     setTimeout(() => {
       setShowDashboard(true);
+      localStorage.setItem('hasEnteredDashboard', 'true');
     }, 600);
   };
 
@@ -440,7 +442,7 @@ function App() {
   };
 
   const currentStudents = students.filter(s => {
-    const matchesSection = s.section === activeTab;
+    const matchesSection = activeTab === 'All Sections' ? true : s.section === activeTab;
     const lowerQ = searchQuery.toLowerCase();
     const matchesSearch = s.name.toLowerCase().includes(lowerQ) || s.username.toLowerCase().includes(lowerQ) || s.univRoll.toString().includes(lowerQ);
     return matchesSection && matchesSearch;
@@ -492,12 +494,45 @@ function App() {
             <span className="slider"></span>
           </label>
         </div>
-        <div className="nav-tabs">
-          {sections.map(sec => (
-            <div key={sec} className={`nav-tab ${activeTab === sec ? 'active' : ''}`} onClick={() => setActiveTab(sec)}>
-              {sec}
+        <div className="nav-tabs" style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+          <div style={{ position: 'relative' }}>
+            <div 
+              className="sort-dropdown" 
+              onClick={() => setIsSectionDropdownOpen(!isSectionDropdownOpen)}
+              style={{ padding: '0.5rem 1.0rem 0.5rem 1rem', fontSize: '0.9rem', minWidth: '130px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', userSelect: 'none' }}
+            >
+              <span>{activeTab || 'Select Section'}</span>
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginLeft: '10px' }}><polyline points="6 9 12 15 18 9"></polyline></svg>
             </div>
-          ))}
+            
+            {isSectionDropdownOpen && (
+              <>
+                <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 999 }} onClick={() => setIsSectionDropdownOpen(false)}></div>
+                <div style={{ 
+                  position: 'absolute', top: '100%', left: 0, minWidth: '100%', 
+                  background: 'var(--card-bg)', border: '1px solid var(--border-color)', 
+                  borderRadius: '8px', marginTop: '4px', maxHeight: '250px', overflowY: 'auto', 
+                  zIndex: 1000, boxShadow: '0 10px 30px rgba(0,0,0,0.5)'
+                }}>
+                  <div 
+                    className={`dropdown-item ${activeTab === 'All Sections' ? 'active' : ''}`}
+                    onClick={() => { setActiveTab('All Sections'); setIsSectionDropdownOpen(false); }}
+                  >
+                    All Sections
+                  </div>
+                  {sections.map(sec => (
+                    <div 
+                      key={sec} 
+                      className={`dropdown-item ${activeTab === sec ? 'active' : ''}`}
+                      onClick={() => { setActiveTab(sec); setIsSectionDropdownOpen(false); }}
+                    >
+                      {sec}
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
           {isAddingSection ? (
             <form onSubmit={async e => {
               e.preventDefault();
@@ -524,11 +559,11 @@ function App() {
                 value={newSectionName}
                 onChange={e => setNewSectionName(e.target.value)}
                 onBlur={() => setIsAddingSection(false)}
-                style={{ padding: '0.2rem 0.5rem', borderRadius: '4px', border: '1px solid var(--border-color)', background: 'var(--bg-color)', color: 'white', width: '80px', fontSize: '0.85rem' }}
+                style={{ padding: '0.4rem 0.8rem', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--app-bg)', color: 'var(--text-primary)', width: '100px', fontSize: '0.85rem' }}
               />
             </form>
           ) : (
-            <div className="add-section-btn" onClick={() => setIsAddingSection(true)}>+ Add Section</div>
+            <div className="add-section-btn" style={{ background: 'var(--border-color)', padding: '0.5rem 1rem', borderRadius: '8px' }} onClick={() => setIsAddingSection(true)}>+ Add Section</div>
           )}
         </div>
       </nav>
@@ -538,7 +573,7 @@ function App() {
           <div className="section-title-group">
             <h2>Section — {activeTab}
               <span className="student-count">{currentStudents.length} students</span>
-              {activeTab && (
+              {activeTab && activeTab !== 'All Sections' && (
                 <>
                   <button className="icon-btn" style={{ marginLeft: '1rem' }} title="Edit Section Settings" onClick={() => { setEditSectionData({ oldName: activeTab, newName: activeTab, trainerName: sectionMetadata[activeTab] || '' }); setEditSectionModalOpen(true); }}>
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
@@ -584,8 +619,8 @@ function App() {
         </div>
 
         <div className="add-btn-row">
-          <button className="primary-btn" onClick={() => { setEditStudentId(null); setNewStudent(prev => ({ ...prev, name: '', username: '', univRoll: '', section: activeTab, githubId: '' })); setAddModalOpen(true) }}>
-            + Add Student to {activeTab}
+          <button className="primary-btn" onClick={() => { setEditStudentId(null); setNewStudent(prev => ({ ...prev, name: '', username: '', univRoll: '', section: activeTab === 'All Sections' ? '' : activeTab, githubId: '' })); setAddModalOpen(true) }}>
+            + Add Student {activeTab !== 'All Sections' ? `to ${activeTab}` : ''}
           </button>
           <label className="secondary-btn" style={{ cursor: 'pointer' }}>
             {isUploading ? 'Uploading...' : '📁 Upload CSV'}
